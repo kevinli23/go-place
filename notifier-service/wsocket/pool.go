@@ -26,7 +26,6 @@ func (pool *Pool) Start() {
 		case client := <-pool.Unregister:
 			delete(pool.Clients, client)
 		case message := <-pool.Broadcast:
-			fmt.Println("Sending message to all clients in Pool")
 			for client := range pool.Clients {
 				if err := client.Conn.WriteJSON(message); err != nil {
 					fmt.Println(err)

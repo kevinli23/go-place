@@ -2,6 +2,7 @@ package router
 
 import (
 	"go/place/api/handlers"
+	"go/place/features"
 	"go/place/pkg/app"
 
 	"github.com/gin-contrib/sessions"
@@ -32,6 +33,10 @@ func Init(app *app.App) *gin.Engine {
 	v1.POST("/place", boardHandler.Draw())
 	v1.POST("/inspect", boardHandler.Inspect())
 	v1.GET("/board", boardHandler.Board())
+
+	if features.IsInternal {
+		v1.GET("/testplace", boardHandler.TestPlace())
+	}
 
 	return r
 }

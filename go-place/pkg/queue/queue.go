@@ -57,7 +57,7 @@ func (q *BoardUpdateQueue) Publish(x, y, color int) error {
 
 	if err := q.Chan.Publish(
 		"",                         // exchange
-		"QueueService1",            // queue name
+		"BoardUpdate",              // queue name
 		false,                      // mandatory
 		false,                      // immediate
 		NewBoardUpdateMsg(message), // message to publish

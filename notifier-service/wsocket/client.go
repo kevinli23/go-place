@@ -31,3 +31,10 @@ func (c *Client) Read() {
 		}
 	}
 }
+
+func NewMessage(body string) Message {
+	return Message{
+		Type: 0,
+		Body: body,
+	}
+}

@@ -169,3 +169,13 @@ func (b *BoardHandler) Draw() gin.HandlerFunc {
 		c.AbortWithStatus(http.StatusOK)
 	}
 }
+
+func (b *BoardHandler) TestPlace() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := b.queue.Publish(1, 1, 15); err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to notify connected users!"})
+		}
+
+		c.JSON(http.StatusAccepted, gin.H{"message": "accepted"})
+	}
+}

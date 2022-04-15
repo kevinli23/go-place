@@ -34,6 +34,28 @@ services:
     networks:
       - dev
 
+  notifier:
+    container_name: goplace_notifier
+    env_file:
+      - .env
+    tty: true
+    build:
+      context: .
+      dockerfile: Dockerfile.notifier.dev
+      args:
+        NOTIFIER_PORT: ${NOTIFIER_PORT}
+    ports:
+      - ${NOTIFIER_PORT}:${NOTIFIER_PORT}
+    restart: on-failure
+    volumes:
+      - .:/app
+    depends_on:
+      # - postgres
+      # - redisboard
+      - app
+    networks:
+      - dev
+
   # redisboard:
   #   hostname: redis
   #   image: redis:latest
@@ -71,7 +93,7 @@ services:
   #   restart: always
   #   networks:
   #     - dev
-
+  
   cassandraboard:
     image: cassandra:latest
     ports:
