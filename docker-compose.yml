@@ -1,0 +1,86 @@
+version: "3.9"
+
+volumes:
+  pgvolume:
+    name: pgvolume
+  cassvolume:
+    name: cassvolume
+
+networks:
+  dev:
+    driver: bridge
+
+services:
+  app:
+    container_name: goplace_container
+    env_file:
+      - .env
+    tty: true
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        API_PORT: ${API_PORT}
+        HOT_RELOAD_PORT: ${HOT_RELOAD_PORT}
+    ports:
+      - 3000:3000
+    restart: on-failure
+    volumes:
+      - .:/app
+    depends_on:
+      # - postgres
+      # - redisboard
+      - cassandraboard
+    networks:
+      - dev
+
+  # redisboard:
+  #   hostname: redis
+  #   image: redis:latest
+  #   command: >
+  #     --requirepass ${REDIS_PASSWORD}
+  #   volumes:
+  #     - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
+  #   ports:
+  #     - '6379:6379'
+  #   restart: on-failure
+  #   networks:
+  #     - dev
+
+  # postgres:
+  #   image: postgres:latest
+  #   restart: on-failure
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - '5432:5432'
+  #   volumes:
+  #     - pgvolume:/var/lib/postgresql/data
+  #   networks:
+  #     - dev
+
+  # message-broker:
+  #   image: rabbitmq:3-management-alpine
+  #   container_name: message-broker
+  #   ports:
+  #     - 5672:5672
+  #     - 15672:15672
+  #   volumes:
+  #     - /dev-rabbitmq/data/:/var/lib/rabbitmq
+  #     - /dev-rabbitmq/log/:/var/log/rabbitmq
+  #   restart: always
+  #   networks:
+  #     - dev
+
+  cassandraboard:
+    image: cassandra:latest
+    ports:
+      - 9042:9042
+      - 7000:7000
+      - 7001:7001
+    volumes:
+      - cassvolume:/var/lib/cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=casscluster
+    networks:
+      - dev

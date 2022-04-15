@@ -1,0 +1,32 @@
+# Start from golang base image
+FROM golang:1.18
+
+# Add Maintainer info
+LABEL maintainer="Kevin Li"
+
+ARG API_PORT
+ARG HOT_RELOAD_PORT
+
+ENV GOPATH="$HOME/go"
+ENV PATH="$GOPATH:$PATH" 
+
+# Setup folders
+WORKDIR /app
+
+# Copy the source from the current directory to the working Directory inside the container
+COPY . .
+COPY .env .
+
+WORKDIR /app/go-place
+# Download all the dependencies
+RUN go mod download
+RUN go get -d -v ./...
+RUN go install -v ./...
+
+EXPOSE ${HOT_RELOAD_PORT}
+EXPOSE ${API_PORT}
+
+# Setup hot-reload for dev stage
+RUN go install github.com/codegangsta/gin
+
+CMD ["make", "port=${API_PORT}", "hr=${HOT_RELOAD_PORT}", "app/dev"]
