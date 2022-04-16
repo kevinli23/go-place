@@ -7,7 +7,6 @@ import (
 	"go/place/pkg/config"
 	"go/place/pkg/db"
 	"go/place/pkg/queue"
-	"log"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gocql/gocql"
@@ -47,10 +46,12 @@ func InitApp() (*App, error) {
 
 	ctx := context.Background()
 
-	for x := 0; x <= 20; x++ {
-		for y := 0; y <= 20; y++ {
-			pos := (x * 50) + (handlers.CANVAS_WIDTH * 50 * y)
-			boardRedis.BitField(ctx, "canvas", "SET", "u50", pos, 0).Result()
+	boardRedis.Del(ctx, "canvas")
+
+	for x := 0; x < 62500*4; x += 50 {
+		_, err := boardRedis.BitField(ctx, "canvas", "SET", "u50", x, 0).Result()
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -63,9 +64,9 @@ func InitApp() (*App, error) {
 		)
 		err = scanner.Scan(&x, &y, &color)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-		boardRedis.BitField(ctx, "canvas", "SET", "u4", (x*4)+(handlers.CANVAS_WIDTH*4*y), color)
+		boardRedis.BitField(ctx, "canvas", "SET", "u4", ((x-1)*4)+(handlers.CANVAS_WIDTH*4*(y-1)), color)
 	}
 
 	a := &App{}

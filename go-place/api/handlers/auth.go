@@ -39,9 +39,21 @@ func (a *AuthHandler) Register() gin.HandlerFunc {
 			return
 		}
 
+		// Check to see if the user already exists
+		_, err := user.FindUserByUsername(a.db, user.Username)
+		if err == nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "the username provided is taken"})
+		}
+
+		_, err = user.FindUserByEmail(a.db, user.Email)
+		if err == nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "the email provided is taken"})
+		}
+
+		// Create the user
 		hashedPassword, err := HashPassword(user.Password)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to generate your account, please try again"})
 		}
 
 		user.Password = hashedPassword

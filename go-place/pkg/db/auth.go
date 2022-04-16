@@ -40,7 +40,20 @@ func (u *User) FindUserByUsername(db *gorm.DB, uname string) (*User, error) {
 	}
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return &User{}, errors.New("User Not Found")
+		return &User{}, errors.New("user not found")
+	}
+
+	return u, err
+}
+
+func (u *User) FindUserByEmail(db *gorm.DB, email string) (*User, error) {
+	err := db.Debug().Model(User{}).Where("email = ?", email).Take(&u).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return &User{}, errors.New("email not found")
 	}
 
 	return u, err

@@ -48,11 +48,15 @@ func NewBoardHandler(rdb *redis.Client, cass *gocql.Session, authDB *gorm.DB, qu
 
 func (a *BoardHandler) Board() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// session := sessions.Default(c)
-		// user := session.Get("username")
+		res, _ := a.boardRedis.Get(c, "canvas").Bytes()
 
-		res, _ := a.boardRedis.Get(c, "canvas").Result()
-		canvasBytes := []byte(res)
+		c.JSON(http.StatusOK, gin.H{"board": res})
+	}
+}
+
+func (a *BoardHandler) ComputedBoard() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		canvasBytes, _ := a.boardRedis.Get(c, "canvas").Bytes()
 		colors := strings.Builder{}
 
 		for i, byt := range canvasBytes {
@@ -94,7 +98,7 @@ func (a *BoardHandler) Inspect() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Not a valid coordinate"})
 		}
 
-		pos := (pixel.XPos * 4) + (pixel.YPos * 4 * CANVAS_WIDTH)
+		pos := ((pixel.XPos - 1) * 4) + ((pixel.YPos - 1) * 4 * CANVAS_WIDTH)
 
 		res, _ := a.boardRedis.BitField(c, "canvas", "GET", "u4", pos).Result()
 
@@ -123,7 +127,7 @@ func (b *BoardHandler) Draw() gin.HandlerFunc {
 			return
 		}
 
-		if pixel.XPos < 0 || pixel.XPos > CANVAS_WIDTH || pixel.YPos < 0 || pixel.YPos > CANVAS_HEIGHT {
+		if pixel.XPos < 1 || pixel.XPos > CANVAS_WIDTH || pixel.YPos < 1 || pixel.YPos > CANVAS_HEIGHT {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Not a valid coordinate"})
 		}
 
@@ -155,7 +159,7 @@ func (b *BoardHandler) Draw() gin.HandlerFunc {
 		}
 
 		// Update the redis board
-		pos := (pixel.XPos * 4) + (pixel.YPos * 4 * CANVAS_WIDTH)
+		pos := ((pixel.XPos - 1) * 4) + ((pixel.YPos - 1) * 4 * CANVAS_WIDTH)
 		nn, err := b.boardRedis.BitField(c, "canvas", "SET", "u4", pos, pixel.Color).Result()
 
 		if (len(nn) == 0) || err != nil {

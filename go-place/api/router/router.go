@@ -5,6 +5,7 @@ import (
 	"go/place/features"
 	"go/place/pkg/app"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -26,6 +27,13 @@ func Init(app *app.App) *gin.Engine {
 	r.Use(sessions.Sessions("authsession", store))
 
 	v1 := r.Group("/v1")
+
+	if features.IsInternal {
+		v1.Use(cors.Default())
+		v1.GET("/computedboard", boardHandler.ComputedBoard())
+		v1.GET("/testplace", boardHandler.TestPlace())
+	}
+
 	v1.POST("/register", authHandler.Register())
 	v1.POST("/login", authHandler.Login())
 	v1.GET("/test", authHandler.Test())
@@ -33,10 +41,6 @@ func Init(app *app.App) *gin.Engine {
 	v1.POST("/place", boardHandler.Draw())
 	v1.POST("/inspect", boardHandler.Inspect())
 	v1.GET("/board", boardHandler.Board())
-
-	if features.IsInternal {
-		v1.GET("/testplace", boardHandler.TestPlace())
-	}
 
 	return r
 }
