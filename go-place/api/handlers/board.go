@@ -64,11 +64,13 @@ func (a *BoardHandler) ComputedBoard() gin.HandlerFunc {
 			first, err := strconv.ParseInt(bits[0:4], 2, 8)
 			if err != nil {
 				c.AbortWithError(http.StatusInternalServerError, err)
+				return
 			}
 
 			second, err := strconv.ParseInt(bits[4:], 2, 8)
 			if err != nil {
 				c.AbortWithError(http.StatusInternalServerError, err)
+				return
 			}
 
 			colors.WriteString(fmt.Sprintf("%d", first))
@@ -117,6 +119,7 @@ func (b *BoardHandler) Draw() gin.HandlerFunc {
 		_, err := user.FindUserByUsername(b.authDB, fmt.Sprintf("%v", username))
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 
 		// Initialize the pixel they are trying to update
@@ -129,6 +132,7 @@ func (b *BoardHandler) Draw() gin.HandlerFunc {
 
 		if pixel.XPos < 1 || pixel.XPos > CANVAS_WIDTH || pixel.YPos < 1 || pixel.YPos > CANVAS_HEIGHT {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Not a valid coordinate"})
+			return
 		}
 
 		// Get this user's last placement
@@ -138,39 +142,48 @@ func (b *BoardHandler) Draw() gin.HandlerFunc {
 			if err == gocql.ErrNotFound {
 				last_placed = time.UnixMilli(1257894000000).UTC()
 			} else {
-				c.AbortWithError(http.StatusInternalServerError, err)
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+				return
 			}
 		}
 
 		if diff := time.Since(last_placed); diff.Minutes() < PLACE_COOLDOWN {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": fmt.Sprintf("You have placed a piece in the last %d minutes", PLACE_COOLDOWN),
-				"secondsRemaining": time.Until(last_placed.Add(time.Minute * 5)).Seconds()})
+				"secondsRemaining": time.Until(last_placed.Add(time.Minute * PLACE_COOLDOWN)).Seconds()})
+			return
 		}
 
 		// Update the pos in cassandra
 		if err := b.boardDB.Query(`INSERT INTO pixel (x, y, color, user, last_placed) VALUES (?, ?, ?, ?, ?)`,
 			pixel.XPos, pixel.YPos, pixel.Color, user.Username, time.Now()).Exec(); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
 		}
 
 		if err := b.boardDB.Query(`INSERT INTO userinfo (type, user, last_placed) VALUES (?, ?, ?)`,
 			"last tile timestamp", user.Username, time.Now()).Exec(); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
 		}
 
 		// Update the redis board
 		pos := ((pixel.XPos - 1) * 4) + ((pixel.YPos - 1) * 4 * CANVAS_WIDTH)
 		nn, err := b.boardRedis.BitField(c, "canvas", "SET", "u4", pos, pixel.Color).Result()
 
+		// Set the last retrieval time in cache for faster lookup
+		b.boardRedis.Set(c, username.(string), time.Now(), time.Minute*10)
+
 		if (len(nn) == 0) || err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the board cache"})
+			return
 		}
 
 		if err := b.queue.Publish(pixel.XPos, pixel.YPos, int(pixel.Color)); err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to notify connected users!"})
+			return
 		}
 
-		c.AbortWithStatus(http.StatusOK)
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{"error": ""})
 	}
 }
 
@@ -185,12 +198,14 @@ func (b *BoardHandler) TestPlace() gin.HandlerFunc {
 
 		if pixel.XPos < 1 || pixel.XPos > CANVAS_WIDTH || pixel.YPos < 1 || pixel.YPos > CANVAS_HEIGHT {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Not a valid coordinate"})
+			return
 		}
 
 		// Update the pos in cassandra
 		if err := b.boardDB.Query(`INSERT INTO pixel (x, y, color, user, last_placed) VALUES (?, ?, ?, ?, ?)`,
 			pixel.XPos, pixel.YPos, pixel.Color, "root", time.Now()).Exec(); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
+			return
 		}
 
 		// Update the redis board
@@ -199,12 +214,44 @@ func (b *BoardHandler) TestPlace() gin.HandlerFunc {
 
 		if (len(nn) == 0) || err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the board cache"})
+			return
 		}
 
-		// if err := b.queue.Publish(1, 1, 15); err != nil {
-		// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to notify connected users!"})
-		// }
+		b.boardRedis.Set(c, "root", fmt.Sprint(time.Now().UTC()), time.Minute*10)
+
+		if err := b.queue.Publish(pixel.XPos, pixel.YPos, int(pixel.Color)); err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to notify connected users!"})
+			return
+		}
 
 		c.JSON(http.StatusAccepted, gin.H{"message": "accepted"})
+	}
+}
+
+func (b *BoardHandler) CanPlaceTest() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		layout := "2006-01-02 15:04:05 -0700 MST"
+
+		lastTime, err := b.boardRedis.Get(c, "root").Result()
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		last_placed, err := time.Parse(layout, lastTime)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		if diff := time.Since(last_placed); diff.Minutes() < PLACE_COOLDOWN {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": fmt.Sprintf("You have placed a piece in the last %d minutes", PLACE_COOLDOWN),
+				"secondsRemaining": time.Until(last_placed.Add(time.Minute * PLACE_COOLDOWN)).Seconds()})
+			return
+		}
+
+		c.AbortWithStatus(http.StatusOK)
+
 	}
 }

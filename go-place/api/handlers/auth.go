@@ -81,12 +81,14 @@ func (a *AuthHandler) Login() gin.HandlerFunc {
 		foundUser, err := user.FindUserByUsername(a.db, user.Username)
 		if err != nil {
 			c.AbortWithError(http.StatusNotFound, err)
+			return
 		}
 
 		if CheckPasswordHash(inputPassword, foundUser.Password) {
 			session.Set("username", foundUser.Username)
 			session.Save()
 			c.JSON(http.StatusOK, gin.H{"username": foundUser.Username, "email": foundUser.Email})
+			return
 		}
 
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -123,12 +125,14 @@ func (a *AuthHandler) OAuthCallback() gin.HandlerFunc {
 		dbUser := db.User{}
 		if _, err := dbUser.FindOrCreateUser(a.db, user.Email); err != nil {
 			c.AbortWithError(http.StatusInternalServerError, errors.New("failed to create a user"))
+			return
 		}
 
 		sess := sessions.Default(c)
 		sess.Set("username", dbUser.Username)
 		if err := sess.Save(); err != nil {
 			fmt.Println(err)
+			return
 		}
 
 		c.Redirect(http.StatusTemporaryRedirect, "/")
@@ -146,6 +150,7 @@ func (a *AuthHandler) GetUsername() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sess := sessions.Default(c)
 		user := sess.Get("username")
+
 		c.JSON(200, gin.H{"username": user})
 	}
 }

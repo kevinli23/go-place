@@ -1,11 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import useStore from '../../store';
+import { useNavigate } from 'react-router-dom';
 
 export default function AuthPanel({ isAuthenticated }) {
 	const { login, user } = useStore();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		fetch('/v1/username', {
+			credentials: 'same-origin',
+		})
+			.then((res) => res.json())
+			.then((data) => {
+				if (data['user'] !== undefined) {
+					console.log(data['user']);
+					login(data['user']);
+				}
+			});
+	}, []);
 
 	const auth = async (type) => {
-		fetch(`http://localhost:3000/auth/${type}`);
+		window.location.href = `/auth/${type}`;
 	};
 
 	return (
@@ -14,11 +29,11 @@ export default function AuthPanel({ isAuthenticated }) {
 				<>
 					<button
 						type="button"
-						class="absolute w-[185px] bottom-12 right-0 text-white bg-[#EA4335] hover:bg-[#EA4335]/90 focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center mr-2 mb-2"
+						className="absolute w-[185px] bottom-12 right-0 text-white bg-[#EA4335] hover:bg-[#EA4335]/90 focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center mr-2 mb-2"
 						onClick={() => auth('google')}
 					>
 						<svg
-							class="w-4 h-4 mr-2 -ml-1"
+							className="w-4 h-4 mr-2 -ml-1"
 							aria-hidden="true"
 							focusable="false"
 							data-prefix="fab"
@@ -36,11 +51,11 @@ export default function AuthPanel({ isAuthenticated }) {
 					</button>
 					<button
 						type="button"
-						class="absolute w-[185px] right-0 bottom-0 text-white bg-[#24292F] focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:hover:bg-[#050708] mr-2 mb-2"
+						className="absolute w-[185px] right-0 bottom-0 text-white bg-[#24292F] focus:outline-none font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:hover:bg-[#050708] mr-2 mb-2"
 						onClick={() => auth('github')}
 					>
 						<svg
-							class="w-4 h-4 mr-2 -ml-1"
+							className="w-4 h-4 mr-2 -ml-1"
 							aria-hidden="true"
 							focusable="false"
 							data-prefix="fab"
@@ -58,20 +73,12 @@ export default function AuthPanel({ isAuthenticated }) {
 					</button>
 				</>
 			) : (
-				<div class="relative w-10 h-10 overflow-hidden bg-gray-100 rounded-full dark:bg-gray-600">
-					<svg
-						class="absolute w-12 h-12 text-gray-400 -left-1"
-						fill="currentColor"
-						viewBox="0 0 20 20"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-							clip-rule="evenodd"
-						></path>
-					</svg>
-				</div>
+				<button
+					type="button"
+					className="absolute bottom-2 right-2 text-gray-900 bg-[#F7BE38] hover:bg-[#F7BE38]/90 focus:ring-4 focus:outline-none focus:ring-[#F7BE38]/50 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:focus:ring-[#F7BE38]/50 mr-2 mb-2"
+				>
+					Logout
+				</button>
 			)}
 		</>
 	);

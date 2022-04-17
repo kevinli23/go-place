@@ -1,6 +1,9 @@
 package wsocket
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 type Pool struct {
 	Register   chan *Client
@@ -23,8 +26,10 @@ func (pool *Pool) Start() {
 		select {
 		case client := <-pool.Register:
 			pool.Clients[client] = true
+			log.Println("New client has connected.")
 		case client := <-pool.Unregister:
 			delete(pool.Clients, client)
+			log.Println("A client has disconnected")
 		case message := <-pool.Broadcast:
 			for client := range pool.Clients {
 				if err := client.Conn.WriteJSON(message); err != nil {

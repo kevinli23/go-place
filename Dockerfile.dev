@@ -17,7 +17,7 @@ WORKDIR /app
 COPY . .
 COPY .env .
 
-RUN rm -rf ./client
+RUN rm -rf client/
 
 WORKDIR /app/go-place
 # Download all the dependencies

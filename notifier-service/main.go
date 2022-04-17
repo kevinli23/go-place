@@ -77,5 +77,5 @@ func main() {
 		serveWs(pool, w, r)
 	})
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":"+cfg.APIPort, nil)
 }

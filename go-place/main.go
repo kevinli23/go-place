@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"go/place/api/router"
 	"go/place/pkg/app"
 	"log"
@@ -11,8 +12,8 @@ import (
 	"time"
 )
 
-// //go:embed client/build
-// var staticFS embed.FS
+//go:embed build
+var reactBuild embed.FS
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -23,7 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	r := router.Init(inst)
+	r := router.Init(inst, reactBuild)
 
 	srv := &http.Server{
 		Addr:    ":" + inst.Config.APIPort,
