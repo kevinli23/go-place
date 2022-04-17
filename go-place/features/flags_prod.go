@@ -3,5 +3,7 @@
 package features
 
 const (
-	IsInternal = false
+	IsInternal   = false
+	HasCassandra = true
+	EnvName      = "prod"
 )

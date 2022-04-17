@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
 	"go/place/pkg/db"
 	"net/http"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/markbates/goth/gothic"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -90,10 +93,59 @@ func (a *AuthHandler) Login() gin.HandlerFunc {
 	}
 }
 
-func (a *AuthHandler) Test() gin.HandlerFunc {
+func (a *AuthHandler) OAuthLogin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		v := session.Get("username")
-		c.JSON(200, gin.H{"username": v})
+		q := c.Request.URL.Query()
+		q.Add("provider", c.Param("provider"))
+		c.Request.URL.RawQuery = q.Encode()
+
+		gothic.BeginAuthHandler(c.Writer, c.Request)
+	}
+}
+
+func (a *AuthHandler) OAuthCallback() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		q := c.Request.URL.Query()
+		q.Add("provider", c.Param("provider"))
+		c.Request.URL.RawQuery = q.Encode()
+
+		user, err := gothic.CompleteUserAuth(c.Writer, c.Request)
+		if err != nil {
+			c.AbortWithError(http.StatusUnauthorized, err)
+			return
+		}
+
+		if user.Email == "" {
+			c.JSON(http.StatusBadRequest, errors.New("could not retrieve your email"))
+			return
+		}
+
+		dbUser := db.User{}
+		if _, err := dbUser.FindOrCreateUser(a.db, user.Email); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, errors.New("failed to create a user"))
+		}
+
+		sess := sessions.Default(c)
+		sess.Set("username", dbUser.Username)
+		if err := sess.Save(); err != nil {
+			fmt.Println(err)
+		}
+
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+	}
+}
+
+func (a *AuthHandler) OAuthLogout() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		gothic.Logout(c.Writer, c.Request)
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+	}
+}
+
+func (a *AuthHandler) GetUsername() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sess := sessions.Default(c)
+		user := sess.Get("username")
+		c.JSON(200, gin.H{"username": user})
 	}
 }

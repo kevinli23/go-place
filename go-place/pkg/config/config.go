@@ -7,20 +7,24 @@ import (
 )
 
 type Config struct {
-	PostgresUser      string `mapstructure:"POSTGRES_USER"`
-	PostgresPort      string `mapstructure:"POSTGRES_PORT"`
-	PostgresHost      string `mapstructure:"POSTGRES_HOST"`
-	PostgresPassword  string `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDB        string `mapstructure:"POSTGRES_DB"`
-	CassandraURL      string `mapstructure:"CASSANDRA_URL"`
-	CassandraKeyspace string `mapstructure:"CASSANDRA_KEYSPACE"`
-	RedisURL          string `mapstructure:"REDIS_URL"`
-	RedisPassword     string `mapstructure:"REDIS_PASSWORD"`
-	APIPort           string `mapstructure:"API_PORT"`
-	SessionSecret     string `mapstructure:"SESSION_SECRET"`
-	RabbitMQUser      string `mapstructure:"RABBITMQ_USER"`
-	RabbitMQPassword  string `mapstructure:"RABBITMQ_PASSWORD"`
-	RabbitMQHost      string `mapstructure:"RABBITMQ_HOST"`
+	PostgresUser       string `mapstructure:"POSTGRES_USER"`
+	PostgresPort       string `mapstructure:"POSTGRES_PORT"`
+	PostgresHost       string `mapstructure:"POSTGRES_HOST"`
+	PostgresPassword   string `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDB         string `mapstructure:"POSTGRES_DB"`
+	CassandraURL       string `mapstructure:"CASSANDRA_URL"`
+	CassandraKeyspace  string `mapstructure:"CASSANDRA_KEYSPACE"`
+	RedisURL           string `mapstructure:"REDIS_URL"`
+	RedisPassword      string `mapstructure:"REDIS_PASSWORD"`
+	APIPort            string `mapstructure:"API_PORT"`
+	SessionSecret      string `mapstructure:"SESSION_SECRET"`
+	RabbitMQUser       string `mapstructure:"RABBITMQ_USER"`
+	RabbitMQPassword   string `mapstructure:"RABBITMQ_PASSWORD"`
+	RabbitMQHost       string `mapstructure:"RABBITMQ_HOST"`
+	GoogleClientID     string `mapstructure:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
+	GithubClientID     string `mapstructure:"GITHUB_CLIENT_ID"`
+	GithubClientSecret string `mapstructure:"GITHUB_CLIENT_SECRET"`
 }
 
 func LoadConfig(path, environment string) (*Config, error) {

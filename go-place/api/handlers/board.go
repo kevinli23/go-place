@@ -176,9 +176,34 @@ func (b *BoardHandler) Draw() gin.HandlerFunc {
 
 func (b *BoardHandler) TestPlace() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := b.queue.Publish(1, 1, 15); err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to notify connected users!"})
+		pixel := Pixel{}
+
+		if err := c.BindJSON(&pixel); err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
 		}
+
+		if pixel.XPos < 1 || pixel.XPos > CANVAS_WIDTH || pixel.YPos < 1 || pixel.YPos > CANVAS_HEIGHT {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Not a valid coordinate"})
+		}
+
+		// Update the pos in cassandra
+		if err := b.boardDB.Query(`INSERT INTO pixel (x, y, color, user, last_placed) VALUES (?, ?, ?, ?, ?)`,
+			pixel.XPos, pixel.YPos, pixel.Color, "root", time.Now()).Exec(); err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+		}
+
+		// Update the redis board
+		pos := ((pixel.XPos - 1) * 4) + ((pixel.YPos - 1) * 4 * CANVAS_WIDTH)
+		nn, err := b.boardRedis.BitField(c, "canvas", "SET", "u4", pos, pixel.Color).Result()
+
+		if (len(nn) == 0) || err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to update the board cache"})
+		}
+
+		// if err := b.queue.Publish(1, 1, 15); err != nil {
+		// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to notify connected users!"})
+		// }
 
 		c.JSON(http.StatusAccepted, gin.H{"message": "accepted"})
 	}

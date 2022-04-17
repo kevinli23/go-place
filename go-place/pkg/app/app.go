@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"go/place/api/handlers"
+	"go/place/features"
 	"go/place/pkg/cache"
 	"go/place/pkg/config"
 	"go/place/pkg/db"
@@ -22,7 +23,7 @@ type App struct {
 }
 
 func InitApp() (*App, error) {
-	cfg, err := config.LoadConfig("./", "app")
+	cfg, err := config.LoadConfig("./", features.EnvName)
 	if err != nil {
 		return nil, err
 	}
@@ -32,9 +33,13 @@ func InitApp() (*App, error) {
 		return nil, err
 	}
 
-	boardDB, err := db.InitBoardDB(cfg.CassandraURL, cfg.CassandraKeyspace)
-	if err != nil {
-		return nil, err
+	var boardDB *gocql.Session
+
+	if features.HasCassandra {
+		boardDB, err = db.InitBoardDB(cfg.CassandraURL, cfg.CassandraKeyspace)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	boardQueue, err := queue.InitRabbitMQConnection(cfg.GetRabbitMQConnectionString())
@@ -55,18 +60,20 @@ func InitApp() (*App, error) {
 		}
 	}
 
-	scanner := boardDB.Query(`SELECT x,y,color FROM pixel`).WithContext(ctx).Iter().Scanner()
-	for scanner.Next() {
-		var (
-			x     int
-			y     int
-			color int
-		)
-		err = scanner.Scan(&x, &y, &color)
-		if err != nil {
-			return nil, err
+	if features.HasCassandra {
+		scanner := boardDB.Query(`SELECT x,y,color FROM pixel`).WithContext(ctx).Iter().Scanner()
+		for scanner.Next() {
+			var (
+				x     int
+				y     int
+				color int
+			)
+			err = scanner.Scan(&x, &y, &color)
+			if err != nil {
+				return nil, err
+			}
+			boardRedis.BitField(ctx, "canvas", "SET", "u4", ((x-1)*4)+(handlers.CANVAS_WIDTH*4*(y-1)), color)
 		}
-		boardRedis.BitField(ctx, "canvas", "SET", "u4", ((x-1)*4)+(handlers.CANVAS_WIDTH*4*(y-1)), color)
 	}
 
 	a := &App{}
