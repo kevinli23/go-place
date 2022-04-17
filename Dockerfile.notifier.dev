@@ -16,6 +16,8 @@ WORKDIR /app
 COPY . .
 COPY .env .
 
+RUN rm -rf client
+
 WORKDIR /app/notifier-service
 # Download all the dependencies
 RUN go mod download
