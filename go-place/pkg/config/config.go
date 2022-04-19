@@ -25,6 +25,8 @@ type Config struct {
 	GoogleClientSecret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
 	GithubClientID     string `mapstructure:"GITHUB_CLIENT_ID"`
 	GithubClientSecret string `mapstructure:"GITHUB_CLIENT_SECRET"`
+	RedditClientID     string `mapstructure:"REDDIT_CLIENT_ID"`
+	RedditClientSecret string `mapstructure:"REDDIT_CLIENT_SECRET"`
 }
 
 func LoadConfig(path, environment string) (*Config, error) {

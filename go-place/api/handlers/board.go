@@ -98,6 +98,7 @@ func (a *BoardHandler) Inspect() gin.HandlerFunc {
 
 		if pixel.XPos < 0 || pixel.XPos > CANVAS_WIDTH || pixel.YPos < 0 || pixel.YPos > CANVAS_HEIGHT {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Not a valid coordinate"})
+			return
 		}
 
 		pos := ((pixel.XPos - 1) * 4) + ((pixel.YPos - 1) * 4 * CANVAS_WIDTH)
@@ -230,7 +231,6 @@ func (b *BoardHandler) TestPlace() gin.HandlerFunc {
 
 func (b *BoardHandler) CanPlaceTest() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		layout := "2006-01-02 15:04:05 -0700 MST"
 
 		lastTime, err := b.boardRedis.Get(c, "root").Result()
@@ -252,6 +252,5 @@ func (b *BoardHandler) CanPlaceTest() gin.HandlerFunc {
 		}
 
 		c.AbortWithStatus(http.StatusOK)
-
 	}
 }

@@ -33,8 +33,8 @@ func Init(app *app.App, reactBuild embed.FS) *gin.Engine {
 	gothic.Store = store
 
 	goth.UseProviders(
-		google.New(app.Config.GoogleClientID, app.Config.GoogleClientSecret, "http://localhost:3000/auth/google/callback", "email"),
-		github.New(app.Config.GithubClientID, app.Config.GithubClientSecret, "http://localhost:3000/auth/github/callback", "user:email"),
+		google.New(app.Config.GoogleClientID, app.Config.GoogleClientSecret, features.HostName+"/auth/google/callback", "email"),
+		github.New(app.Config.GithubClientID, app.Config.GithubClientSecret, features.HostName+"/auth/github/callback", "user:email"),
 	)
 
 	authStore := cookie.NewStore([]byte(app.Config.SessionSecret))
@@ -42,19 +42,17 @@ func Init(app *app.App, reactBuild embed.FS) *gin.Engine {
 
 	r.Use(static.Serve("/", static.LocalFile("./build", true)))
 
-	r.GET("/auth/:provider", authHandler.OAuthLogin())
-	r.GET("/auth/:provider/callback", authHandler.OAuthCallback())
-	r.GET("/logout/:provider", authHandler.OAuthLogout())
-
 	v1 := r.Group("/v1")
 
 	r.Use(cors.Default())
+	r.GET("/auth/:provider", authHandler.OAuthLogin())
+	r.GET("/auth/:provider/callback", authHandler.OAuthCallback())
+	r.GET("/logout/:provider", authHandler.OAuthLogout())
 
 	if features.IsInternal {
 		v1.Use(cors.Default())
 		v1.GET("/computedboard", boardHandler.ComputedBoard())
 		v1.POST("/testplace", boardHandler.TestPlace())
-
 		v1.POST("/register", authHandler.Register())
 		v1.POST("/login", authHandler.Login())
 	}
@@ -63,6 +61,7 @@ func Init(app *app.App, reactBuild embed.FS) *gin.Engine {
 	v1.POST("/place", boardHandler.Draw())
 	v1.POST("/inspect", boardHandler.Inspect())
 	v1.GET("/board", boardHandler.Board())
+	v1.POST("/updatename", authHandler.UpdateUsername())
 
 	return r
 }

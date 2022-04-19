@@ -25,8 +25,8 @@ export default function ColorPalette() {
 
 	return (
 		<>
-			<div className="h-[136px] max-w-fit p-1 rounded-lg group bg-gradient-to-br from-teal-300 to-lime-300 group bg-gradient-to-br from-green-400 to-blue-600 group-hover:from-green-400 group-hover:to-blue-600 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800">
-				<div className="h-32 max-w-fit flex flex-col justify-center bg-gray-500 rounded-lg p-1">
+			<div className="h-[136px] max-w-fit p-1 rounded-lg group bg-gradient-to-br from-orange-600 to-purple-600 group bg-gradient-to-br from-green-400 to-blue-600 group-hover:from-green-400 group-hover:to-blue-600 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-green-200 dark:focus:ring-green-800">
+				<div className="h-32 max-w-fit flex flex-col justify-center bg-[#93c5fd] rounded-lg p-1">
 					{/* <h2 className="font-mono text-center font-bold text-lg">
 						GO/PLACE COLOR PICKER
 					</h2> */}

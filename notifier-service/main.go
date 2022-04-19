@@ -77,5 +77,6 @@ func main() {
 		serveWs(pool, w, r)
 	})
 
+	fmt.Printf("Starting websocket notifier service on port: %s\n", cfg.APIPort)
 	http.ListenAndServe(":"+cfg.APIPort, nil)
 }

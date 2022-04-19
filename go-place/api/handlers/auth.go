@@ -17,6 +17,10 @@ type AuthHandler struct {
 	db *gorm.DB
 }
 
+type UpdateUsernameRequest struct {
+	Username string
+}
+
 func NewAuthHandler(db *gorm.DB) *AuthHandler {
 	return &AuthHandler{
 		db: db,
@@ -46,17 +50,20 @@ func (a *AuthHandler) Register() gin.HandlerFunc {
 		_, err := user.FindUserByUsername(a.db, user.Username)
 		if err == nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "the username provided is taken"})
+			return
 		}
 
 		_, err = user.FindUserByEmail(a.db, user.Email)
 		if err == nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "the email provided is taken"})
+			return
 		}
 
 		// Create the user
 		hashedPassword, err := HashPassword(user.Password)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to generate your account, please try again"})
+			return
 		}
 
 		user.Password = hashedPassword
@@ -142,7 +149,20 @@ func (a *AuthHandler) OAuthCallback() gin.HandlerFunc {
 func (a *AuthHandler) OAuthLogout() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		gothic.Logout(c.Writer, c.Request)
-		c.Redirect(http.StatusTemporaryRedirect, "/")
+		sess := sessions.Default(c)
+		sess.Options(sessions.Options{
+			MaxAge: -1,
+		})
+		sess.Clear()
+		sess.Save()
+
+		c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
+	}
+}
+
+func (a *AuthHandler) RedditOAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
 	}
 }
 
@@ -152,5 +172,34 @@ func (a *AuthHandler) GetUsername() gin.HandlerFunc {
 		user := sess.Get("username")
 
 		c.JSON(200, gin.H{"username": user})
+	}
+}
+
+func (a *AuthHandler) UpdateUsername() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sess := sessions.Default(c)
+		username := sess.Get("username").(string)
+
+		newUser := UpdateUsernameRequest{}
+		if err := c.BindJSON(&newUser); err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+
+		if username == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Please login to do this."})
+			return
+		}
+
+		user := db.User{Username: username}
+		if err := user.UpdateUsername(a.db, newUser.Username); err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to update your username"})
+			return
+		}
+
+		sess.Set("username", user.Username)
+		sess.Save()
+
+		c.JSON(http.StatusAccepted, gin.H{"username": user.Username})
 	}
 }

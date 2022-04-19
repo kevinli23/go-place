@@ -6,4 +6,5 @@ const (
 	IsInternal   = true
 	HasCassandra = true
 	EnvName      = "dev"
+	HostName     = "http://localhost:3000"
 )

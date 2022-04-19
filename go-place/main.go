@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"go/place/api/router"
+	"go/place/features"
 	"go/place/pkg/app"
 	"log"
 	"net/http"
@@ -25,6 +26,8 @@ func main() {
 	}
 
 	r := router.Init(inst, reactBuild)
+
+	log.Printf("Initializing the %s server on port: %s\n", features.EnvName, inst.Config.APIPort)
 
 	srv := &http.Server{
 		Addr:    ":" + inst.Config.APIPort,

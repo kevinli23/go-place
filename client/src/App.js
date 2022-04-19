@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import ColorPalette from './components/ColorPalette';
+import Sidebar from './components/Sidebar';
 import AuthPanel from './components/AuthPanel';
+import Loader from './components/Loader';
 import useStore from './store';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { ToastContainer, toast } from 'react-toastify';
@@ -47,20 +48,57 @@ const colorMapPalette = {
 };
 
 export default function App() {
+	const isDev = process.env.NODE_ENV === 'development';
+	const host = isDev ? 'http://localhost:3000' : '';
+
 	const [boardColors, setBoardColors] = useState(null);
 	const [zoom, setZoom] = useState(1);
 	const [translateX, setTranslateX] = useState(0);
 	const [translateY, setTranslateY] = useState(0);
 	const [boardLoadError, setBoardLoadError] = useState(false);
-	const [dragging, setDragging] = useState(true);
-	const [socketUrl] = useState('ws://localhost:5023/ws');
+	const [socketUrl] = useState(
+		isDev ? 'ws://localhost:5023/ws' : 'wss://goplace.live/ws'
+	);
+
+	const [coord, setCoords] = useState([0, 0]);
 
 	const { lastMessage, readyState } = useWebSocket(socketUrl);
 
-	const { selectedColor, isAuthenticated } = useStore();
+	const { selectedColor, isAuthenticated, dragging } = useStore();
 
 	const maxZoom = 10;
 	const canvasRef = useRef(null);
+	const overlayRef = useRef(null);
+	const toastId = useRef(null);
+
+	const constraint = (zoom, viewport) => {
+		const blocks = 250;
+		const baseSize = 1000;
+		const scaledSize = baseSize * zoom;
+
+		const initialBlockSize = baseSize / blocks;
+		const currBlockSize = scaledSize / blocks;
+
+		const blockDiff = blocks - viewport / currBlockSize;
+
+		const constraintVal = blockDiff * initialBlockSize;
+
+		return constraintVal;
+	};
+
+	const getXandY = (e, zoom) => {
+		const boardSize = 1000 * zoom;
+		const pixelSize = boardSize / 250;
+
+		var rect = e.currentTarget.getBoundingClientRect();
+		const mx = e.clientX - rect.left;
+		const my = e.clientY - rect.top;
+
+		const x = Math.floor(mx / pixelSize);
+		const y = Math.floor(my / pixelSize);
+
+		return [x, y];
+	};
 
 	const connectionStatus = {
 		[ReadyState.CONNECTING]: 'Connecting',
@@ -80,7 +118,7 @@ export default function App() {
 			const canvas = canvasRef.current;
 			const context = canvas.getContext('2d');
 			context.fillStyle = colorMapPalette[vals[2]];
-			context.fillRect(vals[0], vals[1], 1, 1);
+			context.fillRect(vals[0] - 1, vals[1] - 1, 1, 1);
 		}
 	}, [lastMessage]);
 
@@ -97,26 +135,61 @@ export default function App() {
 		}
 	}, []);
 
+	useEffect(() => {
+		setTranslateX((prev) => Math.max(-constraint(zoom, 1000), Math.min(0, prev)));
+		setTranslateY((prev) => Math.max(-constraint(zoom, 750), Math.min(0, prev)));
+	}, [zoom]);
+
 	const mouseMove = useCallback(
 		(e) => {
 			e.preventDefault();
 			if (e.buttons === 1 && dragging) {
 				setTranslateX((prev) =>
-					Math.max(-zoom * 1000, Math.min(0, prev - e.movementX))
+					Math.max(-constraint(zoom, 1000), Math.min(0, prev - e.movementX))
 				);
 				setTranslateY((prev) =>
-					Math.max(-zoom * 1000, Math.min(0, prev - e.movementY))
+					Math.max(-constraint(zoom, 750), Math.min(0, prev - e.movementY))
 				);
 			}
+			setCoords(getXandY(e, zoom));
+
+			const canvas = overlayRef.current;
+			const context = canvas.getContext('2d');
+			context.clearRect(0, 0, 1000, 750);
+
+			if (!dragging) {
+				const blockSize = (zoom * 1000) / 250;
+
+				context.fillStyle = 'rgba(255, 255, 255, 0)';
+				context.fillRect(0, 0, 1000, 750);
+
+				context.strokeStyle = '#000000';
+				context.setLineDash([zoom, zoom]);
+
+				const boardSize = 1000 * zoom;
+				const pixelSize = boardSize / 250;
+				var rect = e.currentTarget.getBoundingClientRect();
+				const mx = e.clientX - rect.left;
+				const my = e.clientY - rect.top;
+				const x = Math.floor(mx / pixelSize);
+				const y = Math.floor(my / pixelSize);
+				const xOffset = 4 - (Math.abs(translateX) % 4);
+				const yOffset = 4 - (Math.abs(translateY) % 4);
+
+				const cx = e.layerX - (e.layerX % blockSize);
+				const cy = e.layerY - (e.layerY % blockSize);
+
+				context.strokeRect(cx, cy, blockSize, blockSize);
+			}
 		},
-		[zoom, dragging]
+		[zoom, dragging, translateX, translateY]
 	);
 
 	const mouseDown = useCallback(
 		async (e) => {
 			e.preventDefault();
 
-			if (!dragging) {
+			if (!dragging && e.which === 1) {
 				const boardSize = 1000 * zoom;
 				const pixelSize = boardSize / 250;
 
@@ -127,15 +200,26 @@ export default function App() {
 				const x = Math.floor(mx / pixelSize);
 				const y = Math.floor(my / pixelSize);
 
-				fetch('/v1/place', {
+				toastId.current = toast.info(`Attempting to place at (${x}, ${y})`, {
+					toastId: 'place',
+					position: 'top-center',
+					autoClose: false,
+					hideProgressBar: true,
+					closeOnClick: true,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+				});
+
+				fetch(host + `/v1/${isDev ? 'test' : ''}place`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
 					},
-					credentials: 'same-origin',
+					// credentials: 'same-origin',
 					body: JSON.stringify({
-						x: x,
-						y: y,
+						x: x + 1,
+						y: y + 1,
 						color: selectedColor,
 					}),
 				})
@@ -151,17 +235,17 @@ export default function App() {
 					})
 					.then((data) => {
 						if (data['error'] != '') {
-							toast(data['error'], {
-								position: 'top-center',
-								autoClose: 2000,
-								hideProgressBar: true,
-							});
+							throw new Error(data['error']);
 						}
+						toast.dismiss(toastId.current);
 					})
 					.catch((error) => {
+						toast.dismiss();
+
 						toast.error(error.message, {
+							toastId: 'place',
 							position: 'top-center',
-							autoClose: 2000,
+							autoClose: 1500,
 							hideProgressBar: true,
 							closeOnClick: true,
 							pauseOnHover: true,
@@ -176,7 +260,7 @@ export default function App() {
 
 	useEffect(() => {
 		const getBoard = async () => {
-			const res = await fetch('/v1/board');
+			const res = await fetch(host + '/v1/board');
 			const data = await res.json();
 
 			const boardBase64 = data['board'];
@@ -234,27 +318,25 @@ export default function App() {
 				canvasRef.current.removeEventListener('mousedown', mouseDown);
 			}
 		};
-	}, [zoom, dragging, selectedColor]);
+	}, [zoom, dragging, selectedColor, translateX, translateY]);
 
 	return (
 		<>
-			<div className="min-h-screen min-w-screen max-w-screen max-h-screen overflow-hidden p-2 flex flex-col justify-center items-center">
-				<div className="min-w-[1004px] max-w-[1004px] min-h-[769px] max-h-[769px] border-black border-2 overflow-hidden">
-					<div className="bg-black max-h-[15px] min-h-[15px] flex flex-row align-center justify-end">
-						<p className="text-white text-[0.6rem] justify-self-start mr-auto ml-1 font-mono">
+			<div className="min-h-screen min-w-screen max-w-screen max-h-screen overflow-hidden p-2 flex flex-row justify-center items-start mt-5">
+				<div className="min-w-[1004px] max-w-[1004px] min-h-[774px] max-h-[774px] border-black rounded-t-lg border-2 overflow-hidden">
+					<div className="bg-black max-h-[20px] min-h-[20px] flex flex-row items-center justify-center">
+						<p className="text-white text-[0.7rem] justify-self-start mr-auto ml-1 font-mono">
 							go/Place
+						</p>
+						<p className="text-white text-[0.7rem] justify-self-center mr-auto font-mono">
+							{`(${coord[0]}, ${coord[1]}, x${zoom})`}
 						</p>
 						<div className="bg-green-400 rounded-full min-h-[10px] min-w-[10px] max-h-[10px] max-w-[10px] mr-1" />
 						<div className="bg-yellow-400 rounded-full min-h-[10px] min-w-[10px] max-h-[10px] max-w-[10px] mr-1" />
 						<div className="bg-red-400 rounded-full min-h-[10px] min-w-[10px] max-h-[10px] max-w-[10px] mr-1" />
 					</div>
-					<div className="min-w-full m-h-full overflow-hidden flex flex-col">
-						{boardLoadError && (
-							<img
-								className="top-[20%] w-[300px] h-[200px] self-center absolute"
-								src="/construction.png"
-							/>
-						)}
+					<div className="min-w-full min-h-full overflow-hidden flex flex-col">
+						{boardLoadError && <Loader />}
 						<canvas
 							id="board"
 							ref={canvasRef}
@@ -266,57 +348,17 @@ export default function App() {
 							}}
 						></canvas>
 					</div>
-				</div>
-				<div className="m-2 flex flex-row">
-					<ColorPalette />
-					<div className="flex flex-col justify-center m-2">
-						<button
-							type="button"
-							className={`m-2 text-white bg-blue-600 hover:bg-blue-800 focus:outline-none w-[50px] h-[50px] ${
-								!dragging ? 'border-red-600 border-2' : ''
-							} font-medium rounded-lg text-sm p-2.5 text-center inline-flex items-center mr-2`}
-							onClick={() => setDragging(false)}
-						>
-							<svg
-								className="w-7 h-7"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth="2"
-									d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-								></path>
-							</svg>
-						</button>
-						<button
-							type="button"
-							className={`m-2 text-white bg-blue-700 hover:bg-blue-800 focus:outline-none w-[50px] h-[50px] ${
-								dragging ? 'border-red-600 border-2' : ''
-							} font-medium rounded-lg text-sm p-2.5 text-center inline-flex items-center mr-2`}
-							onClick={() => setDragging(true)}
-						>
-							<svg
-								className="w-7 h-7"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth="2"
-									d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"
-								></path>
-							</svg>
-						</button>
+					<div className="min-w-[1000px] max-h-[750px] overflow-hidden flex flex-col absolute top-0 mt-[50px] pointer-events-none">
+						<canvas
+							id="overlay"
+							className="pointer-events-none"
+							ref={overlayRef}
+							width="1000"
+							height="750"
+						></canvas>
 					</div>
 				</div>
-				<AuthPanel isAuthenticated={isAuthenticated} />
+				<Sidebar />
 				<ToastContainer />
 			</div>
 		</>

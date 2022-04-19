@@ -5,9 +5,14 @@
 *.so
 *.dylib
 *.env
+
 goplace
+notifier-service
+
+goplace-firebase-creds.json
 
 node_modules/
+builds/
 
 # Test binary, built with `go test -c`
 *.test

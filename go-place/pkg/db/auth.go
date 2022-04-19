@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func InitAuthDB(connString string) (*gorm.DB, error) {
@@ -91,4 +92,20 @@ func (u *User) FindOrCreateUser(db *gorm.DB, email string) (*User, error) {
 	}
 
 	return u, err
+}
+
+func (u *User) UpdateUsername(db *gorm.DB, newName string) error {
+	var users []User
+	if err := db.Debug().Model(&users).Clauses(clause.Returning{}).Where("username = ?", true).Update("username", newName).Take(&u).Error; err != nil {
+		return err
+	}
+
+	if len(users) == 1 {
+		u.Username = users[0].Username
+		u.Email = users[0].Email
+	} else {
+		return errors.New("something went wrong")
+	}
+
+	return nil
 }
