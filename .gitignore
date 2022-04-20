@@ -8,6 +8,9 @@
 
 goplace
 notifier-service
+go-place-api
+
+build/
 
 goplace-firebase-creds.json
 
