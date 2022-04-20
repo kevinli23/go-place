@@ -59,7 +59,6 @@ export default function Sidebar() {
 			const i = setInterval(() => decNextPlaceTime(), 1000);
 			setInter(i);
 		}
-		return () => clearInterval(inter);
 	}, [nextPlaceTime]);
 
 	const formatSeconds = (seconds) => {
