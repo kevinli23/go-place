@@ -11,6 +11,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   image-rendering: pixelated;
   background-color: rgb(147 197 253);
+  overflow-y: hidden;
 }
 
 code {

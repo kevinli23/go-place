@@ -24,7 +24,6 @@ type User struct {
 	gorm.Model
 	Username string `gorm:"size:100;not null;unique" json:"username" validate:"required"`
 	Email    string `gorm:"size:100;not null;unique" json:"email" validate:"required,email"`
-	Password string `gorm:"size:100;not null;unique" json:"password"`
 }
 
 func (u *User) CreateUser(db *gorm.DB) (*User, error) {
@@ -37,6 +36,19 @@ func (u *User) CreateUser(db *gorm.DB) (*User, error) {
 
 func (u *User) FindUserByUsername(db *gorm.DB, uname string) (*User, error) {
 	err := db.Debug().Model(User{}).Where("username = ?", uname).Take(&u).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return &User{}, errors.New("user not found")
+	}
+
+	return u, err
+}
+
+func (u *User) FindUserByID(db *gorm.DB, id int) (*User, error) {
+	err := db.Debug().Model(User{}).Where("id = ?", id).Take(&u).Error
 	if err != nil {
 		return nil, err
 	}

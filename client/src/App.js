@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
-import AuthPanel from './components/AuthPanel';
 import Loader from './components/Loader';
 import useStore from './store';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
@@ -122,10 +121,6 @@ export default function App() {
 		}
 	}, [lastMessage]);
 
-	useEffect(() => {
-		console.log(connectionStatus);
-	}, [readyState]);
-
 	const mouseZoom = useCallback((e) => {
 		e.preventDefault();
 		if (e.deltaY > 0) {
@@ -166,18 +161,23 @@ export default function App() {
 				context.strokeStyle = '#000000';
 				context.setLineDash([zoom, zoom]);
 
-				const boardSize = 1000 * zoom;
-				const pixelSize = boardSize / 250;
-				var rect = e.currentTarget.getBoundingClientRect();
-				const mx = e.clientX - rect.left;
-				const my = e.clientY - rect.top;
-				const x = Math.floor(mx / pixelSize);
-				const y = Math.floor(my / pixelSize);
-				const xOffset = 4 - (Math.abs(translateX) % 4);
-				const yOffset = 4 - (Math.abs(translateY) % 4);
+				var cx = e.layerX - (e.layerX % blockSize);
+				var cy = e.layerY - (e.layerY % blockSize);
 
-				const cx = e.layerX - (e.layerX % blockSize);
-				const cy = e.layerY - (e.layerY % blockSize);
+				if (translateX % 4 !== 0 || translateY % 4 !== 0) {
+					const boardSize = 1000 * zoom;
+					const pixelSize = boardSize / 250;
+
+					var rect = e.currentTarget.getBoundingClientRect();
+					const mx = e.clientX - rect.left;
+					const my = e.clientY - rect.top;
+
+					const x = Math.floor(mx / pixelSize);
+					const y = Math.floor(my / pixelSize);
+
+					cx = (x - Math.abs(translateX) / 4) * blockSize;
+					cy = (y - Math.abs(translateY) / 4) * blockSize;
+				}
 
 				context.strokeRect(cx, cy, blockSize, blockSize);
 			}
@@ -211,12 +211,12 @@ export default function App() {
 					progress: undefined,
 				});
 
-				fetch(host + `/v1/${isDev ? 'test' : ''}place`, {
+				fetch(host + `/v1/${isDev ? '' : ''}place`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
 					},
-					// credentials: 'same-origin',
+					credentials: isDev ? 'include' : 'same-origin',
 					body: JSON.stringify({
 						x: x + 1,
 						y: y + 1,
@@ -243,7 +243,7 @@ export default function App() {
 						toast.dismiss();
 
 						toast.error(error.message, {
-							toastId: 'place',
+							toastId: 'place-error',
 							position: 'top-center',
 							autoClose: 1500,
 							hideProgressBar: true,
@@ -326,7 +326,7 @@ export default function App() {
 				<div className="min-w-[1004px] max-w-[1004px] min-h-[774px] max-h-[774px] border-black rounded-t-lg border-2 overflow-hidden">
 					<div className="bg-black max-h-[20px] min-h-[20px] flex flex-row items-center justify-center">
 						<p className="text-white text-[0.7rem] justify-self-start mr-auto ml-1 font-mono">
-							go/Place
+							go/place
 						</p>
 						<p className="text-white text-[0.7rem] justify-self-center mr-auto font-mono">
 							{`(${coord[0]}, ${coord[1]}, x${zoom})`}

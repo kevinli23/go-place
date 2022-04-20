@@ -1,19 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import useStore from '../../store';
-import { useNavigate } from 'react-router-dom';
 import useLocalStorage from '../../hooks/localstorage';
 
 export default function AuthPanel() {
 	const isDev = process.env.NODE_ENV === 'development';
 	const host = isDev ? 'http://localhost:3000' : '';
-	const { login, user, logout } = useStore();
-	const navigate = useNavigate();
+
+	const { login } = useStore();
 	const [provider, setProvider] = useLocalStorage('provider', '');
-	const { isAuthenticated } = useStore();
+	const { isAuthenticated, setIsAuthModal, isAuthModalOpen } = useStore();
 
 	useEffect(() => {
-		fetch('/v1/username', {
-			credentials: 'same-origin',
+		fetch(host + '/v1/username', {
+			credentials: 'include',
 		})
 			.then((res) => res.json())
 			.then((data) => {
@@ -76,19 +75,29 @@ export default function AuthPanel() {
 					</button>
 				</>
 			) : (
-				<button
-					type="button"
-					className="text-black bg-[#F7BE38] hover:bg-[#F7BE38]/90 font-mono rounded-lg text-sm px-2.5 py-2 text-center inline-flex items-center mb-2"
-					onClick={() =>
-						fetch(`/logout/${provider}`).then((res) => {
-							if (res.ok) {
-								logout();
-							}
-						})
-					}
-				>
-					Logout
-				</button>
+				<>
+					<div className="relative">
+						<button
+							className="relative w-8 h-8 overflow-hidden rounded-full bg-white hover:bg-gray-300 mb-1.5"
+							type="button"
+							onClick={() => setIsAuthModal(!isAuthModalOpen)}
+						>
+							<svg
+								className="absolute top-0 w-10 h-10 text-black -left-1"
+								fill="currentColor"
+								viewBox="0 0 20 20"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									fillRule="evenodd"
+									d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+									clipRule="evenodd"
+								></path>
+							</svg>
+						</button>
+						<span className="top-0 left-6 absolute  w-3.5 h-3.5 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full"></span>
+					</div>
+				</>
 			)}
 		</div>
 	);

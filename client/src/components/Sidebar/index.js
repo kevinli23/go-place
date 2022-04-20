@@ -38,7 +38,7 @@ export default function Sidebar() {
 			</div>
 			<AuthPanel />
 			<div className="flex flex-row justify-center min-w-full">
-				<div className="flex flex-col m-px max-w-[30px] min-w-[30px]">
+				<div className="-ml-px flex flex-col m-px max-w-[30px] min-w-[30px]">
 					{[0, 1, 2, 3, 4, 5, 6, 7].map((ind) => {
 						return (
 							<button

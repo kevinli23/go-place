@@ -37,71 +37,6 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func (a *AuthHandler) Register() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		user := db.User{}
-
-		if err := c.BindJSON(&user); err != nil {
-			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		// Check to see if the user already exists
-		_, err := user.FindUserByUsername(a.db, user.Username)
-		if err == nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "the username provided is taken"})
-			return
-		}
-
-		_, err = user.FindUserByEmail(a.db, user.Email)
-		if err == nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "the email provided is taken"})
-			return
-		}
-
-		// Create the user
-		hashedPassword, err := HashPassword(user.Password)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to generate your account, please try again"})
-			return
-		}
-
-		user.Password = hashedPassword
-		user.CreateUser(a.db)
-
-		c.AbortWithStatus(http.StatusCreated)
-	}
-}
-
-func (a *AuthHandler) Login() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		user := db.User{}
-
-		if err := c.BindJSON(&user); err != nil {
-			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		inputPassword := user.Password
-
-		foundUser, err := user.FindUserByUsername(a.db, user.Username)
-		if err != nil {
-			c.AbortWithError(http.StatusNotFound, err)
-			return
-		}
-
-		if CheckPasswordHash(inputPassword, foundUser.Password) {
-			session.Set("username", foundUser.Username)
-			session.Save()
-			c.JSON(http.StatusOK, gin.H{"username": foundUser.Username, "email": foundUser.Email})
-			return
-		}
-
-		c.AbortWithStatus(http.StatusBadRequest)
-	}
-}
-
 func (a *AuthHandler) OAuthLogin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		q := c.Request.URL.Query()
@@ -137,6 +72,7 @@ func (a *AuthHandler) OAuthCallback() gin.HandlerFunc {
 
 		sess := sessions.Default(c)
 		sess.Set("username", dbUser.Username)
+		sess.Set("id", dbUser.ID)
 		if err := sess.Save(); err != nil {
 			fmt.Println(err)
 			return
@@ -149,12 +85,8 @@ func (a *AuthHandler) OAuthCallback() gin.HandlerFunc {
 func (a *AuthHandler) OAuthLogout() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		gothic.Logout(c.Writer, c.Request)
-		sess := sessions.Default(c)
-		sess.Options(sessions.Options{
-			MaxAge: -1,
-		})
-		sess.Clear()
-		sess.Save()
+
+		c.SetCookie("authsession", "", -1, "/", "", true, true)
 
 		c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
 	}

@@ -38,30 +38,39 @@ func Init(app *app.App, reactBuild embed.FS) *gin.Engine {
 	)
 
 	authStore := cookie.NewStore([]byte(app.Config.SessionSecret))
-	r.Use(gcsessions.Sessions("authsession", authStore))
+
+	if features.IsInternal {
+		r.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{"http://localhost:3001", "http://localhost", "http://localhost:3000"},
+			AllowCredentials: true,
+			AllowMethods:     []string{"PUT", "POST", "GET", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Content-Type", "Content-Length", "Authorization", "Accept", "X-Requested-With"},
+		}))
+	}
+
+	authsession := gcsessions.Sessions("authsession", authStore)
+	r.Use(authsession)
 
 	r.Use(static.Serve("/", static.LocalFile("./build", true)))
 
 	v1 := r.Group("/v1")
+	v1.Use(authsession)
 
-	r.Use(cors.Default())
 	r.GET("/auth/:provider", authHandler.OAuthLogin())
 	r.GET("/auth/:provider/callback", authHandler.OAuthCallback())
 	r.GET("/logout/:provider", authHandler.OAuthLogout())
 
 	if features.IsInternal {
-		v1.Use(cors.Default())
 		v1.GET("/computedboard", boardHandler.ComputedBoard())
 		v1.POST("/testplace", boardHandler.TestPlace())
-		v1.POST("/register", authHandler.Register())
-		v1.POST("/login", authHandler.Login())
+		v1.POST("/updatename", authHandler.UpdateUsername())
 	}
 
 	v1.GET("/username", authHandler.GetUsername())
-	v1.POST("/place", boardHandler.Draw())
+	v1.POST("/place", boardHandler.Place())
 	v1.POST("/inspect", boardHandler.Inspect())
 	v1.GET("/board", boardHandler.Board())
-	v1.POST("/updatename", authHandler.UpdateUsername())
+	v1.GET("/logout", authHandler.OAuthLogout())
 
 	return r
 }

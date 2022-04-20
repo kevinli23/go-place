@@ -35,6 +35,8 @@ func NewRedditClient(clientId, secret, scope, redirectURL string) OAuthClient {
 
 func (r *RedditClient) HandleOAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Use cookies to set state?
+
 		url := fmt.Sprintf("https://www.reddit.com/api/v1/authorize?client_id=%s&response_type=%s&redirect_uri=%s&duration=%s&scope=%s",
 			r.RedditClientID, r.ResponseType, r.RedirectURL, r.Duration, r.Scope)
 

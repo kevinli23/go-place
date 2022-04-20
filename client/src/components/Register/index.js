@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 
 import { LockClosedIcon } from '@heroicons/react/solid';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 
 export default function Register() {
-	const navigate = useNavigate();
+	// const navigate = useNavigate();
 
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -19,14 +19,14 @@ export default function Register() {
 			body: JSON.stringify({ username, email, password }),
 		};
 
-		await fetch('/v1/register', requestOptions).then(async (res) => {
-			if (res.status !== 201) {
-				const err = await res.json();
-				setError(err.error);
-			} else {
-				navigate('/login');
-			}
-		});
+		// await fetch('/v1/register', requestOptions).then(async (res) => {
+		// 	if (res.status !== 201) {
+		// 		const err = await res.json();
+		// 		setError(err.error);
+		// 	} else {
+		// 		navigate('/login');
+		// 	}
+		// });
 	};
 
 	return (
