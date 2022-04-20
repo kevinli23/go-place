@@ -14,6 +14,9 @@ const useStore = create((set) => ({
 			dragging: !state.dragging,
 		})),
 	setNextPlaceTime: (v) => set({ nextPlaceTime: v }),
+	decNextPlaceTime: () =>
+		set((state) => ({ nextPlaceTime: Math.max(0, state.nextPlaceTime - 1) })),
+	resetNextPlaceTime: () => set({ nextPlaceTime: 300 }),
 	login: (u) => set({ isAuthenticated: true, user: u }),
 	logout: () => set({ isAuthenticated: false }),
 }));

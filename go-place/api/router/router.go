@@ -71,6 +71,7 @@ func Init(app *app.App, reactBuild embed.FS) *gin.Engine {
 	v1.POST("/inspect", boardHandler.Inspect())
 	v1.GET("/board", boardHandler.Board())
 	v1.GET("/logout", authHandler.OAuthLogout())
+	v1.GET("/next", boardHandler.GetNextPlaceTime())
 
 	return r
 }

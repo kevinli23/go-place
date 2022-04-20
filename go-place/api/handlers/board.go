@@ -154,7 +154,7 @@ func (b *BoardHandler) Place() gin.HandlerFunc {
 		}
 
 		// Not crucial to succeed
-		if err := b.boardDB.Query(`UPDATE places SET places=places+11 WHERE date=?`, time.Now().String()[:10]).Exec(); err != nil {
+		if err := b.boardDB.Query(`UPDATE places SET places=places+1 WHERE date=?`, time.Now().String()[:10]).Exec(); err != nil {
 			log.Println("Failed to track this place")
 		}
 
@@ -190,10 +190,9 @@ func (b *BoardHandler) GetNextPlaceTime() gin.HandlerFunc {
 			return
 		}
 
-		layout := "2006-01-02 15:04:05 -0700 MST"
-
 		lastTime, err := b.boardRedis.Get(c, fmt.Sprintf("id%v", id)).Result()
 		if err != nil {
+			log.Println(err.Error())
 			if err == redis.Nil {
 				c.AbortWithStatusJSON(http.StatusOK, gin.H{"secondsRemaining": 0})
 				return
@@ -202,7 +201,7 @@ func (b *BoardHandler) GetNextPlaceTime() gin.HandlerFunc {
 			return
 		}
 
-		last_placed, err := time.Parse(layout, lastTime)
+		last_placed, err := time.Parse(time.RFC3339, lastTime)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"secondsRemaining": PLACE_COOLDOWN * 60})
 			return

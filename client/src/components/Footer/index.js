@@ -3,14 +3,10 @@ import React from 'react';
 export default function Footer() {
 	return (
 		<footer class="absolute bottom-0 h-[30px] w-min-screen w-max-screen w-screen bg-black shadow items-center flex pl-3 font-mono">
-			<span class="text-sm text-white text-center">
-				© 2022{' '}
-				<a href="https://goplace.live/" class="hover:underline">
-					go/place
-				</a>
-			</span>
+			<span class="text-sm text-white text-center">© 2022</span>
 			<a
-				href="#"
+				href="https://goplace.live/"
+				target="_blank"
 				class="align-self-right ml-auto mr-3 text-white hover:text-purple-200"
 			>
 				<svg

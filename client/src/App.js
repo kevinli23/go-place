@@ -63,7 +63,12 @@ export default function App() {
 
 	const { lastMessage, readyState } = useWebSocket(socketUrl);
 
-	const { selectedColor, isAuthenticated, dragging } = useStore();
+	const {
+		selectedColor,
+		setNextPlaceTime,
+		dragging,
+		toggleDragging,
+	} = useStore();
 
 	const maxZoom = 10;
 	const canvasRef = useRef(null);
@@ -237,6 +242,8 @@ export default function App() {
 						if (data['error'] != '') {
 							throw new Error(data['error']);
 						}
+						setNextPlaceTime(300);
+						toggleDragging();
 						toast.dismiss(toastId.current);
 					})
 					.catch((error) => {

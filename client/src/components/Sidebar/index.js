@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import useStore from '../../store';
 import AuthPanel from '../AuthPanel';
 
@@ -22,12 +22,52 @@ const colorMapPalette = {
 };
 
 export default function Sidebar() {
+	const isDev = process.env.NODE_ENV === 'development';
+	const host = isDev ? 'http://localhost:3000' : '';
+	const [inter, setInter] = useState(-1);
 	const {
 		selectedColor,
 		setSelectedColor,
 		toggleDragging,
 		dragging,
+		nextPlaceTime,
+		decNextPlaceTime,
+		setNextPlaceTime,
 	} = useStore();
+
+	useEffect(() => {
+		fetch(host + '/v1/next', {
+			credentials: isDev ? 'include' : 'same-origin',
+		})
+			.then((res) => {
+				if (res.status === 401) {
+					throw new Error('unauthorized');
+				}
+
+				return res.json();
+			})
+			.then((data) => {
+				setNextPlaceTime(Math.floor(data['secondsRemaining']));
+			})
+			.catch((error) => console.log(error));
+
+		return () => clearInterval(inter);
+	}, []);
+
+	useEffect(() => {
+		if (inter === -1) {
+			const i = setInterval(() => decNextPlaceTime(), 1000);
+			setInter(i);
+		}
+		return () => clearInterval(inter);
+	}, [nextPlaceTime]);
+
+	const formatSeconds = (seconds) => {
+		const minutes = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+
+		return `${minutes}m${secs < 10 ? '0' : ''}${secs}s`;
+	};
 
 	return (
 		<div className="ml-3 max-h-[390px] min-h-[390px] min-w-[80px] max-w-[80px] bg-[floralwhite] rounded-lg items-start flex flex-col">
@@ -76,12 +116,22 @@ export default function Sidebar() {
 				</div>
 			</div>
 			<button
-				className={`mt-2 self-center bg-blue-500 border-blue-700 hover:bg-blue-400 text-white font-bold py-2 px-4 hover:border-blue-500 rounded ${
-					!dragging && 'border-4 scale-[70%]'
+				className={`mt-2 self-center text-white font-mono py-2 px-4 rounded ${
+					!dragging && 'border-2 scale-[80%]'
+				} ${
+					nextPlaceTime !== 0
+						? 'disabled cursor-not-allowed bg-gray-500'
+						: 'bg-blue-500 hover:border-blue-500 border-blue-700 hover:bg-blue-400'
 				}`}
-				onClick={() => toggleDragging()}
+				onClick={() => {
+					if (nextPlaceTime === 0) toggleDragging();
+				}}
 			>
-				{dragging ? 'Place' : 'Placing'}
+				{dragging
+					? nextPlaceTime === 0
+						? 'Place'
+						: formatSeconds(nextPlaceTime)
+					: 'Placing'}
 			</button>
 		</div>
 	);
