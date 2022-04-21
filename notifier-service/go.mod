@@ -2,7 +2,11 @@ module notifier-service
 
 go 1.18
 
-require github.com/gorilla/websocket v1.5.0
+require (
+	github.com/gorilla/websocket v1.5.0
+	github.com/spf13/viper v1.11.0
+	github.com/streadway/amqp v1.0.0
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
@@ -15,8 +19,6 @@ require (
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.11.0 // indirect
-	github.com/streadway/amqp v1.0.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 	golang.org/x/text v0.3.7 // indirect
