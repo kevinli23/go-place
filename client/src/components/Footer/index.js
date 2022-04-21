@@ -5,7 +5,7 @@ export default function Footer() {
 		<footer class="absolute bottom-0 h-[30px] w-min-screen w-max-screen w-screen bg-black shadow items-center flex pl-3 font-mono">
 			<span class="text-sm text-white text-center">© 2022</span>
 			<a
-				href="https://goplace.live/"
+				href="https://github.com/kevinli23/go-place"
 				target="_blank"
 				class="align-self-right ml-auto mr-3 text-white hover:text-purple-200"
 			>

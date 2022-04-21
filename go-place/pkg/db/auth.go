@@ -88,9 +88,6 @@ func (u *User) DoesEmailExists(db *gorm.DB, email string) (bool, error) {
 
 func (u *User) FindOrCreateUser(db *gorm.DB, email string) (*User, error) {
 	err := db.Debug().Model(User{}).Where("email = ?", email).Take(&u).Error
-	if err != nil {
-		return nil, err
-	}
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		u.Username = uuid.NewString()
