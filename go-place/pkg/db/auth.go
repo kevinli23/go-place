@@ -23,7 +23,7 @@ func InitAuthDB(connString string) (*gorm.DB, error) {
 type User struct {
 	gorm.Model
 	Username string `gorm:"size:100;not null;unique" json:"username" validate:"required"`
-	Email    string `gorm:"size:100;not null;unique" json:"email" validate:"required,email"`
+	Email    string `gorm:"size:100;not null;unique" json:"email" validate:"required"`
 }
 
 func (u *User) CreateUser(db *gorm.DB) (*User, error) {
@@ -86,11 +86,16 @@ func (u *User) DoesEmailExists(db *gorm.DB, email string) (bool, error) {
 	return true, err
 }
 
-func (u *User) FindOrCreateUser(db *gorm.DB, email string) (*User, error) {
+func (u *User) FindOrCreateUser(db *gorm.DB, email string, params ...string) (*User, error) {
 	err := db.Debug().Model(User{}).Where("email = ?", email).Take(&u).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		u.Username = uuid.NewString()
+		if len(params) > 0 {
+			u.Username = params[0]
+		} else {
+			u.Username = uuid.NewString()
+		}
+
 		u.Email = email
 
 		if _, err = u.CreateUser(db); err != nil {

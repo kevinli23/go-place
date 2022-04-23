@@ -115,9 +115,8 @@ export default function Sidebar() {
 				</div>
 			</div>
 			<button
-				className={`mt-2 self-center text-white font-mono py-2 px-4 rounded ${
-					!dragging && 'border-2 scale-[80%]'
-				} ${
+				className={`mt-2 self-center text-white font-mono py-2 px-4 rounded ${!dragging &&
+					'border-2 scale-[80%]'} ${
 					nextPlaceTime !== 0
 						? 'disabled cursor-not-allowed bg-gray-500'
 						: 'bg-blue-500 hover:border-blue-500 border-blue-700 hover:bg-blue-400'

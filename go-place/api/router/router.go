@@ -5,6 +5,7 @@ import (
 	"go/place/api/handlers"
 	"go/place/features"
 	"go/place/pkg/app"
+	"go/place/pkg/reddit"
 
 	"github.com/gin-contrib/cors"
 	gcsessions "github.com/gin-contrib/sessions"
@@ -21,7 +22,8 @@ import (
 func Init(app *app.App, reactBuild embed.FS) *gin.Engine {
 	r := gin.Default()
 
-	authHandler := handlers.NewAuthHandler(app.AuthDB)
+	redditClient := reddit.NewRedditClient(app.Config.RedditClientID, app.Config.RedditClientSecret, "identity", features.HostName+"/auth/reddit/callback")
+	authHandler := handlers.NewAuthHandler(app.AuthDB, redditClient)
 	boardHandler := handlers.NewBoardHandler(app.BoardRedis, app.BoardDB, app.AuthDB, app.BoardQueue)
 
 	store := sessions.NewCookieStore([]byte(app.Config.SessionSecret))

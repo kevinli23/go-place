@@ -113,6 +113,10 @@ export default function App() {
 	}[readyState];
 
 	useEffect(() => {
+		console.log(connectionStatus);
+	}, [readyState]);
+
+	useEffect(() => {
 		if (lastMessage) {
 			const data = JSON.parse(lastMessage.data);
 			const s = data['body'];
@@ -239,7 +243,7 @@ export default function App() {
 						return res.json();
 					})
 					.then((data) => {
-						if (data['error'] != '') {
+						if (data['error'] !== '') {
 							throw new Error(data['error']);
 						}
 						setNextPlaceTime(300);

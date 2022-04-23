@@ -8,6 +8,7 @@ export default function Footer() {
 				href="https://github.com/kevinli23/go-place"
 				target="_blank"
 				class="align-self-right ml-auto mr-3 text-white hover:text-purple-200"
+				rel="noopener noreferrer"
 			>
 				<svg
 					class="w-5 h-5"

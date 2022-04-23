@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go/place/pkg/db"
+	"go/place/pkg/reddit"
 	"net/http"
 
 	"github.com/gin-contrib/sessions"
@@ -14,16 +15,18 @@ import (
 )
 
 type AuthHandler struct {
-	db *gorm.DB
+	db           *gorm.DB
+	RedditClient *reddit.RedditClient
 }
 
 type UpdateUsernameRequest struct {
 	Username string
 }
 
-func NewAuthHandler(db *gorm.DB) *AuthHandler {
+func NewAuthHandler(db *gorm.DB, redditClient *reddit.RedditClient) *AuthHandler {
 	return &AuthHandler{
-		db: db,
+		db:           db,
+		RedditClient: redditClient,
 	}
 }
 
@@ -43,7 +46,12 @@ func (a *AuthHandler) OAuthLogin() gin.HandlerFunc {
 		q.Add("provider", c.Param("provider"))
 		c.Request.URL.RawQuery = q.Encode()
 
-		gothic.BeginAuthHandler(c.Writer, c.Request)
+		if c.Param("provider") == "reddit" {
+			a.RedditClient.HandleOAuth(c)
+		} else {
+			gothic.BeginAuthHandler(c.Writer, c.Request)
+		}
+
 	}
 }
 
@@ -53,29 +61,33 @@ func (a *AuthHandler) OAuthCallback() gin.HandlerFunc {
 		q.Add("provider", c.Param("provider"))
 		c.Request.URL.RawQuery = q.Encode()
 
-		user, err := gothic.CompleteUserAuth(c.Writer, c.Request)
-		if err != nil {
-			c.AbortWithError(http.StatusUnauthorized, err)
-			return
-		}
+		if c.Param("provider") == "reddit" {
+			a.RedditClient.HandleOAuthCallback(c, a.db)
+		} else {
+			user, err := gothic.CompleteUserAuth(c.Writer, c.Request)
+			if err != nil {
+				c.AbortWithError(http.StatusUnauthorized, err)
+				return
+			}
 
-		if user.Email == "" {
-			c.JSON(http.StatusBadRequest, errors.New("could not retrieve your email"))
-			return
-		}
+			if user.Email == "" {
+				c.JSON(http.StatusBadRequest, errors.New("could not retrieve your email"))
+				return
+			}
 
-		dbUser := db.User{}
-		if _, err := dbUser.FindOrCreateUser(a.db, user.Email); err != nil {
-			c.AbortWithError(http.StatusInternalServerError, errors.New("failed to create a user"))
-			return
-		}
+			dbUser := db.User{}
+			if _, err := dbUser.FindOrCreateUser(a.db, user.Email); err != nil {
+				c.AbortWithError(http.StatusInternalServerError, errors.New("failed to create a user"))
+				return
+			}
 
-		sess := sessions.Default(c)
-		sess.Set("username", dbUser.Username)
-		sess.Set("id", dbUser.ID)
-		if err := sess.Save(); err != nil {
-			fmt.Println(err)
-			return
+			sess := sessions.Default(c)
+			sess.Set("username", dbUser.Username)
+			sess.Set("id", dbUser.ID)
+			if err := sess.Save(); err != nil {
+				fmt.Println(err)
+				return
+			}
 		}
 
 		c.Redirect(http.StatusTemporaryRedirect, "/")
@@ -84,7 +96,11 @@ func (a *AuthHandler) OAuthCallback() gin.HandlerFunc {
 
 func (a *AuthHandler) OAuthLogout() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		gothic.Logout(c.Writer, c.Request)
+		provider := c.Param("provider")
+
+		if provider != "reddit" {
+			gothic.Logout(c.Writer, c.Request)
+		}
 
 		c.SetCookie("authsession", "", -1, "/", "", true, true)
 
