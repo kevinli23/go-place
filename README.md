@@ -11,7 +11,7 @@
 
 A recreation of Reddit's r/place written in go, currently live at [goplace.live](https://goplace.live)
 
-## Available OAuth Providers
+## Available Login Providers
 
 ![Google](https://img.shields.io/badge/google-4285F4?style=for-the-badge&logo=google&logoColor=white)
 ![Reddit](https://img.shields.io/badge/Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white)
@@ -46,4 +46,4 @@ Currently only supports Desktop (or a screen width of at least 1200px)
 ![](https://img.shields.io/badge/-%23CF6EE4-%23CF6EE4)
 ![](https://img.shields.io/badge/-%23820080-%23820080)
 
-![image](https://user-images.githubusercontent.com/42505833/164909535-95e306d2-3298-427b-b4ee-cad398978bf1.png)
+![image](https://user-images.githubusercontent.com/42505833/167006794-33728ec3-035b-4ad0-a5f7-79a5321a8541.png)
