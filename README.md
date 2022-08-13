@@ -1,6 +1,6 @@
 # go/place
 
-[![Website banbucket.ninja](https://img.shields.io/website-up-down-green-red/https/www.goplace.live.svg)](https://goplace.live)
+[![Website goplace.live](https://img.shields.io/website-up-down-green-red/https/www.goplace.live.svg)](https://goplace.live)
 [![Latest commit](https://badgen.net/github/last-commit/kevinli23/go-place/main)](https://GitHub.com/go-place/banbucket-backend/commit/)
 [![Apache 2.0 license](https://img.shields.io/badge/License-Apache%202.0-red.svg)](http://www.apache.org/licenses/)
 
